@@ -71,7 +71,7 @@ func getShell() (string, []string) {
 
 // TestConnection tests if the attack box is reachable
 func TestConnection(cfg *Config) error {
-	target := fmt.Sprintf("%s:%d", cfg.AttackIP, cfg.AttackPort)
+	target := net.JoinHostPort(cfg.AttackIP, fmt.Sprintf("%d", cfg.AttackPort))
 	conn, err := net.DialTimeout("tcp", target, 5)
 	if err != nil {
 		return fmt.Errorf("cannot reach %s: %w", target, err)

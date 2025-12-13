@@ -26,7 +26,7 @@ func main() {
 	showConfig := flag.Bool("show-config", false, "Show current configuration")
 	flag.Parse()
 
-	fmt.Println(banner)
+	fmt.Print(banner)
 	log.Println("[*] CherryPicker starting...")
 	log.Println("[!] For authorized penetration testing only!")
 
