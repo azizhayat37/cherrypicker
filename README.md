@@ -84,13 +84,55 @@ sudo ./cherrypicker-target -install -p 8888 -s "YourSecretKey123"
 
 ---
 ## Architecture (simplified)
-
 ```text
-Attacker                    Network                    Target
----------                   -------                    ------
-cherrypicker-attacker  -- connect -->  cherrypicker-target
-    (send SHA256(response))  <-- challenge ---------------
-    (interactive shell I/O)  <-- shell I/O ----------------
+                    +-----------------+                       +-----------------+
+                    |   Attacker      |                       |     Target      |
+                    |  cherrypicker   |                       |  cherrypicker   |
+                    |   -attacker     | <-- TLS + Auth -->      |   -target       |
+                    +-----------------+                       +-----------------+
+                           |                                           |
+                           | 1. connect (TCP/TLS)                        |
+                           |------------------------------------------->|
+                           |                                           |
+                           | 2. server sends nonce                       |
+                           |<-------------------------------------------|
+                           |                                           |
+                           | 3. client computes SHA256(nonce+secret)    |
+                           |------------------------------------------->|
+                           |                                           |
+                           | 4. server verifies -> on success spawn PTY |
+                           |<-------------------------------------------|
+                           |                                           |
+                           | 5. interactive shell I/O over TLS          |
+                           |<==========================================>|
+                           |                                           |
+                           | 6. logging, optional persistence, respawn  |
+                           |                                           |
+```
+
+Components
+- Listener (target): TCP server that accepts connections, performs challenge-response, and, on success, spawns a platform-appropriate pseudo-terminal or command process and proxies stdin/stdout/stderr over the connection.
+- Attacker client: connects to target, performs the response calculation, and provides an interactive terminal to the operator.
+- Auth module: deterministic SHA256(nonce + shared_key) verification; signature must be kept secret and meet length/entropy requirements.
+- Transport: TLS (1.2+) for confidentiality and integrity; supports self-signed certs by default and optional custom cert/key.
+- Service/daemon wrapper: platform-specific installer (systemd, launchd, Windows service) for persistence and auto-restart.
+- Logging & monitoring: connection attempts, auth failures, and runtime errors logged to configured sinks with rotation.
+
+Typical flow
+1. Target binds to configured address:port and loads TLS cert/key (auto-generate if missing).
+2. Attacker connects; TLS handshake completes (optionally skip verification for self-signed certs).
+3. Target sends secure random nonce; attacker returns SHA256(nonce + shared_secret).
+4. Target validates response; on match, it spawns a shell/command process and proxies traffic; on mismatch, it closes the connection and logs the attempt.
+5. Session ends on explicit exit, connection drop, or target-side termination; service/respawn logic can restart the listener if configured.
+
+Platform notes
+- Linux/macOS: uses pty for interactive shell emulation.
+- Windows: uses ConPTY or Win32 process I/O depending on availability.
+- Persistence installers differ by OS; uninstall/remove instructions provided in README.
+
+Security considerations
+- Always use strong, unique shared secrets and restrict listener exposure with firewall rules.
+- Prefer supplying validated certs and run attacker with certificate verification enabled in production.
 ```
 
 ## Features
