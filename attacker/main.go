@@ -28,7 +28,7 @@ Version: 2.0.0
 func main() {
 	targetIP := flag.String("t", "", "Target IP address (required)")
 	targetPort := flag.Int("p", 0, "Target port (required)")
-	authKey := flag.String("s", "CHERRY_PICKER_2025", "Authentication signature/key")
+	authKey := flag.String("s", "", "Authentication signature/key (required)")
 	timeout := flag.Int("timeout", 10, "Connection timeout in seconds")
 	flag.Parse()
 
@@ -36,15 +36,19 @@ func main() {
 
 	// Validate required arguments
 	if *targetIP == "" {
-		log.Fatal("[!] Error: -t is required\n\nUsage: ./cherrypicker-attacker -t <IP> -p <PORT> [-s <SIGNATURE>] [-timeout <SEC>]\n")
+		log.Fatal("[!] Error: -t is required\n\nUsage: ./cherrypicker-attacker -t <IP> -p <PORT> -s <SIGNATURE> [-timeout <SEC>]\n")
 	}
 
 	if *targetPort == 0 {
-		log.Fatal("[!] Error: -p is required\n\nUsage: ./cherrypicker-attacker -t <IP> -p <PORT> [-s <SIGNATURE>] [-timeout <SEC>]\n")
+		log.Fatal("[!] Error: -p is required\n\nUsage: ./cherrypicker-attacker -t <IP> -p <PORT> -s <SIGNATURE> [-timeout <SEC>]\n")
 	}
 
 	if *targetPort < 1 || *targetPort > 65535 {
 		log.Fatal("[!] Error: Port must be between 1 and 65535\n")
+	}
+
+	if *authKey == "" {
+		log.Fatal("[!] Error: -s (signature) is required\n\nUsage: ./cherrypicker-attacker -t <IP> -p <PORT> -s <SIGNATURE> [-timeout <SEC>]\n")
 	}
 
 	log.Printf("[*] Connecting to %s:%d\n", *targetIP, *targetPort)

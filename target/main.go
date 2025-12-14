@@ -31,10 +31,27 @@ Version: 2.0.0
 var authKey string
 
 func main() {
-	port := flag.Int("p", 9999, "Port to listen on")
-	key := flag.String("s", "CHERRY_PICKER_2025", "Authentication signature/key")
+	port := flag.Int("p", 0, "Port to listen on (required)")
+	key := flag.String("s", "", "Authentication signature/key (required)")
 	installPersistence := flag.Bool("install", false, "Install as persistent service/daemon")
 	flag.Parse()
+
+	// Validate required arguments
+	if *port == 0 {
+		log.Fatal("[!] Error: -p (port) is required\n\nUsage: ./cherrypicker-target -p <PORT> -s <SIGNATURE> [-install]\n")
+	}
+
+	if *port < 1 || *port > 65535 {
+		log.Fatal("[!] Error: Port must be between 1 and 65535\n")
+	}
+
+	if *key == "" {
+		log.Fatal("[!] Error: -s (signature) is required\n\nUsage: ./cherrypicker-target -p <PORT> -s <SIGNATURE> [-install]\n")
+	}
+
+	if len(*key) < 10 {
+		log.Fatal("[!] Error: Signature must be at least 10 characters for security\n")
+	}
 
 	authKey = *key
 
