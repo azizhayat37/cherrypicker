@@ -31,8 +31,8 @@ Version: 2.0.0
 var authKey string
 
 func main() {
-	port := flag.Int("port", 9999, "Port to listen on")
-	key := flag.String("key", "CHERRY_PICKER_2025", "Authentication key")
+	port := flag.Int("p", 9999, "Port to listen on")
+	key := flag.String("s", "CHERRY_PICKER_2025", "Authentication signature/key")
 	installPersistence := flag.Bool("install", false, "Install as persistent service/daemon")
 	flag.Parse()
 

