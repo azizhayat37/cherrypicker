@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"crypto/sha256"
+	"crypto/tls"
 	"encoding/hex"
 	"flag"
 	"fmt"
@@ -30,17 +31,19 @@ func main() {
 	targetPort := flag.Int("p", 0, "Target port (required)")
 	authKey := flag.String("s", "", "Authentication signature/key (required)")
 	timeout := flag.Int("timeout", 10, "Connection timeout in seconds")
+	useTLS := flag.Bool("tls", true, "Use TLS encryption (default: true)")
+	insecure := flag.Bool("insecure", true, "Skip TLS certificate verification (default: true)")
 	flag.Parse()
 
 	fmt.Println(attackerBanner)
 
 	// Validate required arguments
 	if *targetIP == "" {
-		log.Fatal("[!] Error: -t is required\n\nUsage: ./cherrypicker-attacker -t <IP> -p <PORT> -s <SIGNATURE> [-timeout <SEC>]\n")
+		log.Fatal("[!] Error: -t is required\n\nUsage: ./cherrypicker-attacker -t <IP> -p <PORT> -s <SIGNATURE> [-timeout <SEC>] [-tls] [-insecure]\n")
 	}
 
 	if *targetPort == 0 {
-		log.Fatal("[!] Error: -p is required\n\nUsage: ./cherrypicker-attacker -t <IP> -p <PORT> -s <SIGNATURE> [-timeout <SEC>]\n")
+		log.Fatal("[!] Error: -p is required\n\nUsage: ./cherrypicker-attacker -t <IP> -p <PORT> -s <SIGNATURE> [-timeout <SEC>] [-tls] [-insecure]\n")
 	}
 
 	if *targetPort < 1 || *targetPort > 65535 {
@@ -48,15 +51,34 @@ func main() {
 	}
 
 	if *authKey == "" {
-		log.Fatal("[!] Error: -s (signature) is required\n\nUsage: ./cherrypicker-attacker -t <IP> -p <PORT> -s <SIGNATURE> [-timeout <SEC>]\n")
+		log.Fatal("[!] Error: -s (signature) is required\n\nUsage: ./cherrypicker-attacker -t <IP> -p <PORT> -s <SIGNATURE> [-timeout <SEC>] [-tls] [-insecure]\n")
 	}
 
 	log.Printf("[*] Connecting to %s:%d\n", *targetIP, *targetPort)
+	log.Printf("[*] TLS Enabled: %v\n", *useTLS)
+	if *useTLS {
+		log.Printf("[*] Certificate Verification: %v\n", !*insecure)
+	}
 	log.Printf("[*] Timeout: %d seconds\n", *timeout)
 
 	// Connect to target with timeout
 	target := net.JoinHostPort(*targetIP, fmt.Sprintf("%d", *targetPort))
-	conn, err := net.DialTimeout("tcp", target, time.Duration(*timeout)*time.Second)
+	var conn net.Conn
+	var err error
+
+	if *useTLS {
+		// TLS connection
+		tlsConfig := &tls.Config{
+			InsecureSkipVerify: *insecure,
+		}
+		dialer := &net.Dialer{
+			Timeout: time.Duration(*timeout) * time.Second,
+		}
+		conn, err = tls.DialWithDialer(dialer, "tcp", target, tlsConfig)
+	} else {
+		// Plain TCP connection
+		conn, err = net.DialTimeout("tcp", target, time.Duration(*timeout)*time.Second)
+	}
 	if err != nil {
 		log.Fatalf("[!] Connection failed: %v\n", err)
 	}

