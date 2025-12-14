@@ -24,6 +24,8 @@ const attackerBanner = `
                             |___/                             
 [ATTACKER MODULE] - Connect to deployed targets
 Version: 2.0.0
+Created by: Aziz Hayat (https://github.com/azizhayat37)
+Creator Note: This tool is for authorized security testing only. Unauthorized use is illegal.
 `
 
 func main() {
