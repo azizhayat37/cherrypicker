@@ -1,3 +1,10 @@
+  ____ _                          ____  _      _             
+ / ___| |__   ___ _ __ _ __ _   _|  _ \(_) ___| | _____ _ __ 
+| |   | '_ \ / _ \ '__| '__| | | | |_) | |/ __| |/ / _ \ '__|
+| |___| | | |  __/ |  | |  | |_| |  __/| | (__|   <  __/ |   
+ \____|_| |_|\___|_|  |_|   \__, |_|   |_|\___|_|\_\___|_|   
+                            |___/             
+
 # CherryPicker
 
 Authenticated bind shell for authorized penetration testing. Deploy a listener on target systems, then connect remotely to establish interactive shell access.
