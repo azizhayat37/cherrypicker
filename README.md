@@ -88,25 +88,25 @@ sudo ./cherrypicker-target -install -p 8888 -s "YourSecretKey123"
                     +-----------------+                       +-----------------+
                     |   Attacker      |                       |     Target      |
                     |  cherrypicker   |                       |  cherrypicker   |
-                    |   -attacker     | <-- TLS + Auth -->      |   -target       |
+                    |   -attacker     | <-- TLS + Auth -->    |     -target     |
                     +-----------------+                       +-----------------+
                            |                                           |
-                           | 1. connect (TCP/TLS)                        |
-                           |------------------------------------------->|
+                           | 1. connect (TCP/TLS)                      |
+                           |------------------------------------------>|
                            |                                           |
-                           | 2. server sends nonce                       |
-                           |<-------------------------------------------|
+                           | 2. server sends nonce                     |
+                           |<------------------------------------------|
                            |                                           |
-                           | 3. client computes SHA256(nonce+secret)    |
-                           |------------------------------------------->|
+                           | 3. client computes SHA256(nonce+secret)   |
+                           |------------------------------------------>|
                            |                                           |
-                           | 4. server verifies -> on success spawn PTY |
-                           |<-------------------------------------------|
+                           | 4. server verifies -> on success spawn PTY|
+                           |<------------------------------------------|
                            |                                           |
-                           | 5. interactive shell I/O over TLS          |
-                           |<==========================================>|
+                           | 5. interactive shell I/O over TLS         |
+                           |<=========================================>|
                            |                                           |
-                           | 6. logging, optional persistence, respawn  |
+                           | 6. logging, optional persistence, respawn |
                            |                                           |
 ```
 
