@@ -83,17 +83,15 @@ sudo ./cherrypicker-target -install -p 8888 -s "YourSecretKey123"
 - TLS (default): protects handshake and all session traffic. Use `-cert`/`-key` for custom certs. Use `-insecure=false` on attacker to enforce validation.
 
 ---
-
 ## Architecture (simplified)
-```
-Attacker                Network                Target
----------               -------                ------
-cherrypicker-attacker  ── connect ──▶  cherrypicker-target
-        - SHA256(response)  ◀─ challenge ─────
-        - Interactive shell  ◀─ shell I/O ─────
-```
 
----
+```text
+Attacker                    Network                    Target
+---------                   -------                    ------
+cherrypicker-attacker  -- connect -->  cherrypicker-target
+    (send SHA256(response))  <-- challenge ---------------
+    (interactive shell I/O)  <-- shell I/O ----------------
+```
 
 ## Features
 
